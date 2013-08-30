@@ -1,0 +1,149 @@
+// -*- mode: javascript; encoding: utf-8; -*-
+// Use kmyacc to compile
+
+%pure_parser
+
+%token NUMBER UMINUS BOUND
+
+%left '+' '-'
+%left '*' '/' '%'
+%nonassoc UMINUS
+%left 'd'
+%left 'x'
+
+%{
+    var insn_stack = [];
+
+    Array.prototype.flatten = function() {
+	var m = []
+	return m.concat.apply(m, this);
+    };
+%}
+
+%%
+
+goal: expr		{ insn_stack = $1; }
+|			{ insn_stack = []; }
+;
+
+expr: expr '+' expr	{ $$ = [$1, $3, "add"]; }
+    | expr '-' expr	{ $$ = [$1, $3, "sub"]; }
+    | expr '*' expr	{ $$ = [$1, $3, "mul"]; }
+    | expr '/' expr	{ $$ = [$1, $3, "div"]; }
+    | '(' expr ')'	{ $$ = $2; }
+    | expr '%'		{ $$ = [$1, 100, "mul"]; }
+    | '-' NUMBER %prec UMINUS	{ $$ = -$2; }
+    | roll		{ $$ = $1; }
+    | NUMBER		{ $$ = $1; }
+    | NUMBER 'x' expr	{ $$ = gen_for_loop($1, $3).concat(fill_array("add", $1 - 1)).flatten(); }
+    | expr 'x' NUMBER	{ $$ = gen_for_loop($3, $1).concat(fill_array("add", $3 - 1)).flatten(); }
+;
+
+roll: opt_num 'd' opt_num opt_bound {
+    var d = $1 ? $1 : 1;
+    var f = $3 ? $3 : 6;
+    
+    if($4[1] != "keep_highest")
+	r = gen_for_loop(d, [f, "roll"]).concat(fill_array($4, d - 1));
+    else
+	r = gen_for_loop(d, [f, "roll"]).concat(d, $4).concat(fill_array("add", $4[0] - 1));
+    
+    $$ = r.flatten();
+}
+;
+
+opt_num: NUMBER		{ $$ = $1; }
+    |			{ $$ = null; }
+;
+
+opt_bound:		{ $$ = "add"; }
+    | BOUND			{ $$ = $1 == 'L' ? "min" : "max"; }
+    | 'k' NUMBER		{ $$ = [$2, "keep_highest"]; }
+;
+
+%%
+
+
+var str;
+
+var tokens = [
+    [ /^\s+/, function(m) { return null; } ] ,
+    [ /^\d+/, function(m) { return [NUMBER, parseInt(m[0])]; } ],
+    [ /^-([LH])/, function(m) { return [BOUND, m[1]]; } ],
+    [ /^.|\n/, function(m) { return [m[0].charCodeAt(0), m[0]]; } ]
+];
+
+function fill_array(value, n) {
+    var a = []
+    while(n-- > 0) { a.push(value); }
+    return a;
+}
+
+function gen_for_loop(count, body) {
+    if(count > 1)
+	return [count, body.flatten().length, "for", body.flatten(), "next"].flatten();
+    else
+	return body;
+}
+
+function try_match(s) {
+    for(var i = 0; i < tokens.length; i++) {
+	var t = tokens[i];
+	var re = t[0];
+	var action = t[1]; 
+	
+	if(m = re.exec(s)) {
+	    var lv = action(m);
+	    if(lv) {
+		r = lv[0];
+		yylval = lv[1];
+	    }
+	    s = s.slice(m[0].length);
+	    if(lv) return [r, s];
+	}
+    }
+    return [0, s];
+}
+
+function yylex() {
+    var m;
+    var r;
+
+    if(str.length == 0) return 0;
+
+    while(str.length > 0) {
+	r = try_match(str);
+	str = r[1];
+	if(r[0]) break;
+    }
+
+    return r[0];
+}
+
+function yyerror(msg) {
+    console.log("ERROR", msg);
+}
+
+
+var readline = require('readline');
+
+var rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+rl.setPrompt("DICE> ");
+rl.prompt();
+
+rl.on("line", function(line) {
+    str = line;
+    yyparse();
+
+    flat_insn = insn_stack.flatten()
+    
+    console.log(flat_insn);
+
+    rl.prompt();
+}).on("close", function() {
+    process.exit(0);
+});
