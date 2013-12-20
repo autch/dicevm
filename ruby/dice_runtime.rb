@@ -43,18 +43,23 @@ class DiceNotationRuntime
   # ---- helpers
 
   def with_args(num_of_operands)
-    v = @ds.pop(num_of_operands).reverse
-    raise "Stack underflow" if v.length < num_of_operands
+    if num_of_operands.respond_to?(:minmax) then
+      v = @ds.pop(num_of_operands.max).reverse
+      raise "Stack underflow" if v.length < num_of_operands.min
+    else
+      v = @ds.pop(num_of_operands).reverse
+      raise "Stack underflow" if v.length < num_of_operands
+    end
     yield(*v)
   end
 
   # ---- insns
 
   def lit; @ds << self.with_args(1){|v| v }; end
-  def add; @ds << self.with_args(2){|x, y| x + y}; end
-  def sub; @ds << self.with_args(2){|x, y| x - y}; end
-  def mul; @ds << self.with_args(2){|x, y| x * y}; end
-  def div; @ds << self.with_args(2){|x, y| x / y}; end
+  def add; @ds << self.with_args((1..2)){|x, y| x.to_i + y.to_i }; end
+  def sub; @ds << self.with_args((1..2)){|x, y| x.to_i - y.to_i }; end
+  def mul; @ds << self.with_args((1..2)){|x, y| x.to_i * y.to_i }; end
+  def div; @ds << self.with_args((1..2)){|x, y| x.to_i / y.to_i }; end
   def max; @ds << self.with_args(2){|x, y| x > y ? x : y}; end
   def min; @ds << self.with_args(2){|x, y| x < y ? x : y}; end
   def roll; @ds << self.with_args(1){|v| Kernel.rand(v) + 1}; end
@@ -63,6 +68,25 @@ class DiceNotationRuntime
       values = @ds.pop(num_values)
       values.sort{|x, y| y <=> x }.first(keep)
     }
+  end
+  alias :push :lit
+  def lt; @ds << self.with_args(2){|x, y| (x < y) ? 1 : 0 }; end
+  def gt; @ds << self.with_args(2){|x, y| (x > y) ? 1 : 0 }; end
+  def eq; @ds << self.with_args(2){|x, y| (x == y) ? 1 : 0 }; end
+  def le; @ds << self.with_args(2){|x, y| (x <= y) ? 1 : 0 }; end
+  def ge; @ds << self.with_args(2){|x, y| (x >= y) ? 1 : 0 }; end
+  def ne; @ds << self.with_args(2){|x, y| (x != y) ? 1 : 0 }; end
+
+  def dup
+    @ds << @ds[-1]
+  end
+
+  def pop
+    @ds.pop
+  end
+
+  def goto
+    @ip = @ds.pop
   end
 
   def for

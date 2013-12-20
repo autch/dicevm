@@ -29,7 +29,7 @@ rule
     f = val[2] ? val[2] : 6
 
     if val[3][1] != :keep_highest then
-      r = gen_for_loop(d, [f, :roll]) + ([val[3]] * (d - 1))
+      r = gen_for_loop(d, [f, :roll, val[3]])
     else
       r = gen_for_loop(d, [f, :roll]) + [d, val[3]] + ([:add] * (val[3][0] - 1))
     end
