@@ -14,6 +14,9 @@ rl.on("line", function(line) {
     str = line;
 
     r = new runtime.DiceRuntime();
+    r.event('beforeStep', function(ip, insn, ds, cs) {
+        console.log("IP(", this.ip - 1, "): ", insn, ", DS:", this.ds, "CS:", this.cs); // DEBUG
+    });
     
     try {
         insn = parser.parse(str);

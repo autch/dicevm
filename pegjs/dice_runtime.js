@@ -25,7 +25,7 @@ module.exports = (function(){
         if(!v) {
             return false;
         }
-        console.log("IP(", this.ip - 1, "): ", v, this.ds, this.cs); // DEBUG
+        this.events.beforeStep.call(this, this.ip - 1, v, this.ds, this.cs);
 
         if(v % 1 === 0) {
             this.ds.push(v);
@@ -123,6 +123,21 @@ module.exports = (function(){
         }
     };
 
+    DiceRuntime.prototype.events = {
+        beforeStep: function(ip, insn, ds, cs) { }
+    };
+
+    DiceRuntime.prototype.event = function(name, callback) {
+        if(typeof name === 'undefined') {
+            return this.events;
+        }
+        if(typeof callback === 'undefined') {
+            return this.events[name];
+        }
+        this.events[name] = callback;
+        return this;
+    };
+    
     var result = {};
 
     result.DiceRuntime = DiceRuntime;
