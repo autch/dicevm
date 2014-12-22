@@ -5,16 +5,16 @@
     return Array.prototype.concat.apply([], this);
   };
 
-  function fill_array(value, n) {
+  function fillArray(value, n) {
     var a = [];
     while(n--) { a.push(value); }
     return a;
   }
 
-  function generate_binary(op, left, rest) {
+  function generateBinary(op, left, rest) {
     return [rest, left, op].flatten();
   }
-  function generate_for(count, body) {
+  function generateFor(count, body) {
     if(count == 0) return [];
     if(count == 1) return [body];
     var b = body;
@@ -41,28 +41,28 @@ unary
   / primary
 
 sum
-  = left:prod _ '+' _ right:sum { return generate_binary('add', left, right); }
-  / left:prod _ '-' _ right:sum { return generate_binary('sub', left, right); }
+  = left:prod _ '+' _ right:sum { return generateBinary('add', left, right); }
+  / left:prod _ '-' _ right:sum { return generateBinary('sub', left, right); }
   / prod
 
 prod
-  = left:unary _ '*' _ right:prod { return generate_binary('mul', left, right); }
-  / left:unary _ '/' _ right:prod { return generate_binary('div', left, right); }
+  = left:unary _ '*' _ right:prod { return generateBinary('mul', left, right); }
+  / left:unary _ '/' _ right:prod { return generateBinary('div', left, right); }
   / unary
 
 times
-  = left:sum 'x' right:primary { return generate_for(right, left).concat(fill_array('add', right - 1)).flatten(); }
+  = left:sum _ 'x' _ right:primary { return generateFor(right, left).concat(fillArray('add', right - 1)).flatten(); }
   / sum
 
 roll
   = d:dice 'd' s:sides spec:bound_spec {
-      var r = generate_for(d, [s, 'roll']);
+      var r = generateFor(d, [s, 'roll']);
       if(spec instanceof Array) {
         r = r.concat(d, spec[1], spec[0]);
         d = spec[1];
         spec = 'add';
       }
-      return r.concat(fill_array(spec, d - 1)).flatten();
+      return r.concat(fillArray(spec, d - 1)).flatten();
     }
 
 dice
